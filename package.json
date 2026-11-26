@@ -1,0 +1,46 @@
+{
+  "name": "polyglot-rs-workspace",
+  "private": true,
+  "version": "0.1.0-alpha.1",
+  "author": {
+    "name": "Thieu Quan Ngoc",
+    "email": "hi@stupd.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thestupd/polyglot-rs.git"
+  },
+  "homepage": "https://github.com/thestupd/polyglot-rs#readme",
+  "bugs": {
+    "url": "https://github.com/thestupd/polyglot-rs/issues",
+    "email": "hi@stupd.dev"
+  },
+  "workspaces": [
+    "packages/node"
+  ],
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "build": "npm run build --workspace=polyglot-rs",
+    "build:debug": "npm run build:debug --workspace=polyglot-rs",
+    "typecheck": "npm run typecheck --workspace=polyglot-rs",
+    "test": "npm run test:rust && npm run test:node && npm run test:release-tools",
+    "test:rust": "cargo test --workspace --locked",
+    "test:node": "node --test tests/integration/*.test.cjs",
+    "test:parsers": "node --test tests/parsers/*.test.cjs",
+    "test:package": "node scripts/test-package.cjs",
+    "lint": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets --locked -- -D warnings",
+    "pack:check": "node scripts/release.cjs check",
+    "release:record": "node scripts/release.cjs record",
+    "release:prepare": "node scripts/release.cjs prepare",
+    "release:publish": "node scripts/release.cjs publish",
+    "test:release": "node scripts/test-release.cjs",
+    "test:release-tools": "node --test tests/release/*.test.cjs"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.0.0",
+    "@types/node": "^22.0.0",
+    "typescript": "~5.9.3"
+  }
+}

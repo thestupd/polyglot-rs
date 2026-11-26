@@ -1,0 +1,12 @@
+/target/
+node_modules/
+packages/node/dist/
+packages/node/native/
+packages/node/README.md
+packages/node/LICENSE
+packages/node/CHANGELOG.md
+packages/node/docs/
+*.tgz
+.DS_Store
+.idea/
+/release/

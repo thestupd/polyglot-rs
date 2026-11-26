@@ -1,0 +1,78 @@
+{
+  "name": "polyglot-rs",
+  "version": "0.1.0-alpha.1",
+  "description": "Rust-powered binary format inspection, validation and composition candidates for Node.js",
+  "license": "MIT",
+  "author": {
+    "name": "Thieu Quan Ngoc",
+    "email": "hi@stupd.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thestupd/polyglot-rs.git",
+    "directory": "packages/node"
+  },
+  "homepage": "https://github.com/thestupd/polyglot-rs#readme",
+  "bugs": {
+    "url": "https://github.com/thestupd/polyglot-rs/issues",
+    "email": "hi@stupd.dev"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "src/",
+    "docs/",
+    "release-manifest.json",
+    "native/*.node",
+    "native/*.js",
+    "native/*.d.ts",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=22.13"
+  },
+  "keywords": [
+    "polyglot",
+    "binary",
+    "png",
+    "gif",
+    "mpeg-ts",
+    "rust",
+    "napi"
+  ],
+  "sideEffects": false,
+  "napi": {
+    "binaryName": "polyglot-rs",
+    "targets": [
+      "aarch64-apple-darwin",
+      "x86_64-apple-darwin",
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-pc-windows-msvc"
+    ]
+  },
+  "scripts": {
+    "build:native": "napi build --manifest-path ../../crates/polyglot-napi/Cargo.toml --output-dir native --platform --js index.js --dts index.d.ts --release",
+    "build:native:debug": "napi build --manifest-path ../../crates/polyglot-napi/Cargo.toml --output-dir native --platform --js index.js --dts index.d.ts",
+    "build:ts": "tsc -p tsconfig.json",
+    "build": "npm run build:native && npm run build:ts",
+    "build:debug": "npm run build:native:debug && npm run build:ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p ../../examples/tsconfig.json",
+    "prepack": "node ../../scripts/release.cjs source-pack",
+    "prepublishOnly": "node ../../scripts/release.cjs source-pack"
+  }
+}

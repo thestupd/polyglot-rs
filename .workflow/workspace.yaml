@@ -1,0 +1,62 @@
+version: 1
+workspace:
+  name: polyglot-rs
+  type: library
+repository:
+  default_branch: main # inferred: local initialization; remote repository is empty
+  remote: origin
+  branching:
+    feature: 'feature/{task_id}_{slug}'
+    bugfix: 'bugfix/{task_id}_{slug}'
+    chore: 'chore/{task_id}_{slug}'
+  commit:
+    convention: conventional
+source:
+  languages: [rust, typescript]
+  package_manager: npm
+work_management:
+  provider: none
+architecture:
+  style: modular
+  notes:
+    - Rust core is independent of Node.js and built-in format implementations.
+verification:
+  commands:
+    install: npm ci --ignore-scripts --registry=https://registry.npmjs.org/
+    build: npm run build
+    lint: npm run lint
+    typecheck: npm run typecheck
+    unit_test: npm test
+    integration_test: npm run test:parsers
+    package_test: npm run test:package
+  required: [build, lint, typecheck, unit_test, integration_test, package_test]
+  acceptance: required
+infrastructure:
+  provider: none
+release:
+  strategy: command
+  from: release/0.1.0-alpha.1 # bootstrap release branch; no existing remote history
+  to: main
+  branch_pattern: 'release/{version}'
+  tag_pattern: 'v{version}'
+  version_source: packages/node/package.json
+  version_files: [package.json, packages/node/package.json, package-lock.json]
+  changelog: {file: CHANGELOG.md, generator: builtin}
+  github_release: false
+  commands:
+    prepare: npm run release:prepare -- artifacts
+    publish: npm run release:publish
+workflow:
+  default: release
+  gates: [create-pr, deploy, release, report]
+  profiles:
+    release: [release]
+models:
+  steps: {}
+capabilities:
+  commit: {enabled: true}
+  push: {enabled: true}
+  release: {enabled: true}
+  publish: {enabled: true}
+  merge_pr: {enabled: false}
+  deploy: {enabled: false}

@@ -1,0 +1,14 @@
+id: release-0.1.0-alpha.1
+title: First public npm alpha
+type: release
+source: release
+branch: release/0.1.0-alpha.1
+workflow: release
+version: 0.1.0-alpha.1
+previous_version: null
+steps:
+  - {name: release, status: in_progress}
+pr: null
+release_url: null
+tickets: []
+updated: 2026-11-26

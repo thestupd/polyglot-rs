@@ -1,0 +1,20 @@
+[package]
+name = "polyglot-strategies"
+description = "Composition strategies for polyglot-rs"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[dependencies]
+polyglot-core.workspace = true
+
+[dev-dependencies]
+polyglot-formats.workspace = true
+
+[lints]
+workspace = true

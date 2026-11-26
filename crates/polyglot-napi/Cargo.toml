@@ -1,0 +1,27 @@
+[package]
+name = "polyglot-napi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+polyglot-core.workspace = true
+polyglot-formats.workspace = true
+polyglot-strategies.workspace = true
+serde_json.workspace = true
+napi = { version = "3", default-features = false, features = ["napi8"] }
+napi-derive = "3"
+
+[build-dependencies]
+napi-build = "2"
+
+# napi-rs generates the FFI boundary; handwritten parsers forbid unsafe code.
+[lints]
