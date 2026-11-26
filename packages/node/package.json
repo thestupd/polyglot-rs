@@ -1,6 +1,6 @@
 {
   "name": "polyglot-rs",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "Rust-powered binary format inspection, validation and composition candidates for Node.js",
   "license": "MIT",
   "author": {
