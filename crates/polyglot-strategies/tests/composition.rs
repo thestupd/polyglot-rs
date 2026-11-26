@@ -127,18 +127,27 @@ fn whole_output_validation_is_mandatory_by_default() {
 #[test]
 fn built_in_profiles_reject_image_append_and_placeholder_algorithms() {
     let composer = builtin_composer(polyglot_formats::builtin_registry().unwrap(), 1024).unwrap();
-    for formats in [
-        ["png", "mpeg-ts"],
-        ["gif", "mpeg-ts"],
-        ["mpeg-ts", "png"],
-        ["jpeg", "zip"],
+    // A carrier image as the first input + any payload second is supported
+    // through the carrier's named strategy; append never promotes the pair.
+    for (formats, strategy) in [
+        (["png", "mpeg-ts"], "png"),
+        (["gif", "mpeg-ts"], "gif"),
+        (["jpeg", "mpeg-ts"], "jpeg"),
+        (["png", "segment"], "png"),
+        (["jpeg", "zip"], "jpeg"),
     ] {
         let formats = formats.map(String::from);
         let result = composer.check_compatibility(&formats, "auto").unwrap();
+        assert_eq!(result.status, CompatibilityStatus::Supported);
+        assert_eq!(result.strategies, vec![strategy.to_string()]);
+        let append = composer.check_compatibility(&formats, "append").unwrap();
+        assert_eq!(append.status, CompatibilityStatus::Unsupported);
+    }
+    // The carrier must come first; a payload-first pair is not a carrier.
+    for formats in [["mpeg-ts", "png"], ["zip", "jpeg"]] {
+        let formats = formats.map(String::from);
+        let result = composer.check_compatibility(&formats, "auto").unwrap();
         assert_ne!(result.status, CompatibilityStatus::Supported);
-        if formats[0] != "jpeg" {
-            assert_eq!(result.status, CompatibilityStatus::Unsupported);
-        }
     }
     for name in ["embed", "overlap"] {
         let result = composer

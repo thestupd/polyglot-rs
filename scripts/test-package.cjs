@@ -13,7 +13,7 @@ require('./package-docs.cjs');
 try {
   const packed = JSON.parse(execFileSync(process.execPath, [npm, 'pack', '--workspace=polyglot-rs', '--ignore-scripts', '--json', '--cache', join(temporary, 'npm-cache'), '--pack-destination', temporary], { cwd: root, encoding: 'utf8' }))[0];
   const paths = packed.files.map((file) => file.path);
-  for (const path of ['dist/index.js', 'dist/index.d.ts', 'native/index.js', 'docs/feasibility.md', 'README.md', 'LICENSE']) assert.ok(paths.includes(path), `${path} is packaged`);
+  for (const path of ['dist/index.js', 'dist/index.d.ts', 'native/index.js', 'docs/roadmap.md', 'README.md', 'LICENSE']) assert.ok(paths.includes(path), `${path} is packaged`);
   assert.ok(paths.some((path) => path.endsWith('.node')), 'native addon is packaged');
   execFileSync(process.execPath, [npm, 'install', '--prefix', temporary, '--ignore-scripts', '--offline', '--no-audit', '--no-fund', '--cache', join(temporary, 'npm-cache'), join(temporary, packed.filename)], { cwd: temporary, stdio: 'pipe' });
   const encoded = readFileSync(join(root, 'tests/fixtures/red.png')).toString('base64');
@@ -28,13 +28,20 @@ try {
       const esm = await import('polyglot-rs');
       assert.equal(esm.Polyglot, Polyglot);
       assert.ok((await esm.Polyglot.validate(data, { formats: ['png'] }))[0].valid);
-      assert.equal((await esm.Polyglot.checkCompatibility({ formats: ['png', 'mpeg-ts'] })).status, 'unsupported');
+      const compat = await esm.Polyglot.checkCompatibility({ formats: ['png', 'mpeg-ts'] });
+      assert.equal(compat.status, 'supported');
+      assert.deepEqual(compat.strategies, ['png']);
       const candidate = await esm.Polyglot.create({ inputs: [
         { format: 'opaque-a', data: Buffer.from([0, 255]) },
         { format: 'opaque-b', data: new Uint8Array([42]) },
       ], validate: false });
       assert.deepEqual(candidate.toBuffer(), Buffer.from([0, 255, 42]));
       assert.equal(candidate.report.validated, false);
+      // Carrier strategy + built-in 1x1 carrier from a single payload input.
+      const carried = await esm.Polyglot.create({ inputs: [{ format: 'payload', data: Buffer.from([1, 2, 3]) }], strategy: 'png' });
+      assert.equal(carried.report.strategy, 'png');
+      assert.equal(carried.payloadRegion().length, 3);
+      assert.match(carried.byteRange(), /^3@\\d+$/);
     })().catch((error) => { console.error(error); process.exitCode = 1; });
   `;
   execFileSync(process.execPath, ['-e', check], { cwd: temporary, stdio: 'inherit' });

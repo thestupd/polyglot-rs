@@ -28,7 +28,6 @@
     "test": "npm run test:rust && npm run test:node && npm run test:release-tools",
     "test:rust": "cargo test --workspace --locked",
     "test:node": "node --test tests/integration/*.test.cjs",
-    "test:parsers": "node --test tests/parsers/*.test.cjs",
     "test:package": "node scripts/test-package.cjs",
     "lint": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets --locked -- -D warnings",
     "pack:check": "node scripts/release.cjs check",

@@ -12,7 +12,7 @@ pub use buffer::{Cursor, Limits};
 pub use capability::{AppendCapability, EmbeddingCapability, EmbeddingLocation};
 pub use compatibility::{CompatibilityResult, CompatibilityStatus};
 pub use composer::{
-    Composer, CompositionOptions, CompositionReport, CompositionResult, InputReport,
+    Composer, CompositionOptions, CompositionReport, CompositionResult, InputReport, Region,
 };
 pub use error::{Error, Result};
 pub use input::PolyglotInput;

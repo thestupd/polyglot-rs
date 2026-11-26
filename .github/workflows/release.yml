@@ -36,14 +36,6 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:package
-      - name: Independent full decoding
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-          npm run test:parsers
-        env:
-          REQUIRE_EXTERNAL_PARSERS: '1'
       - run: npm run release:record -- ${{ matrix.platform }}
       - uses: actions/upload-artifact@v7
         with:

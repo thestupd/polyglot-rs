@@ -79,6 +79,13 @@ export interface CompositionInputReport {
   validation: ValidationResult | null;
 }
 
+/** Where one format interpretation lives inside the composed output. */
+export interface CompositionRegion {
+  format: string;
+  offset: number;
+  length: number;
+}
+
 export interface CompositionReport {
   strategy: string;
   compatibility: CompatibilityResult;
@@ -88,6 +95,8 @@ export interface CompositionReport {
   /** Native validation only; this does not imply external decoding verification. */
   validated: boolean;
   sizeBytes: number;
+  /** Empty when every interpretation spans the complete output. */
+  regions: CompositionRegion[];
   warnings: string[];
 }
 

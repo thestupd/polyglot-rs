@@ -6,6 +6,6 @@ for (const name of ['README.md', 'LICENSE', 'CHANGELOG.md']) {
 }
 const docs = join(root, 'packages/node/docs');
 mkdirSync(docs, { recursive: true });
-for (const name of ['feasibility.md', 'feasibility-results.json', 'roadmap.md', 'releasing.md']) {
+for (const name of ['roadmap.md', 'releasing.md']) {
   copyFileSync(join(root, 'docs', name), join(docs, name));
 }

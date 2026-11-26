@@ -31,3 +31,7 @@ subprocess.run([
     '-i', 'color=c=red:s=16x16:r=5', '-t', '2', '-c:v', 'mpeg2video',
     '-threads', '1', '-f', 'mpegts', '-y', str(destination / 'red.ts'),
 ], check=True)
+subprocess.run([
+    'ffmpeg', '-hide_banner', '-loglevel', 'error', '-i', str(destination / 'red.png'),
+    '-pix_fmt', 'yuvj420p', '-q:v', '2', '-y', str(destination / 'red.jpg'),
+], check=True)

@@ -1,11 +1,14 @@
 import { Buffer } from 'node:buffer';
+import { type CarrierFormat, defaultCarrier, isCarrierFormat } from './carriers.js';
 import { PolyglotError, fromNativeError } from './errors.js';
 import { native } from './native.js';
 import { PolyglotResult } from './result.js';
 import type { CompatibilityOptions, CompatibilityResult, CompositionReport, CreateOptions, StrategyRequirements } from './types.js';
-import type { BinaryInput, CustomFormat, FormatInfo, InspectionOptions, InspectionResult, ValidateOptions, ValidationResult } from './types.js';
+import type { BinaryInput, CustomFormat, FormatInfo, InspectionOptions, InspectionResult, PolyglotInput, ValidateOptions, ValidationResult } from './types.js';
 
 export * from './types.js';
+export { CARRIER_FORMATS, defaultCarrier } from './carriers.js';
+export type { CarrierFormat } from './carriers.js';
 export { PolyglotResult } from './result.js';
 export { PolyglotError } from './errors.js';
 export type { PolyglotErrorCode } from './errors.js';
@@ -81,19 +84,32 @@ export class PolyglotEngine {
 
   async create(options: CreateOptions): Promise<PolyglotResult> {
     const [maxInputBytes, maxDecodedBytes] = limits(options);
-    if (!Array.isArray(options.inputs) || options.inputs.length < 2 || options.inputs.length > 256) {
-      throw new PolyglotError('ERR_INVALID_INPUT', 'Composition requires between 2 and 256 inputs');
+    if (!Array.isArray(options.inputs) || options.inputs.length < 1 || options.inputs.length > 256) {
+      throw new PolyglotError('ERR_INVALID_INPUT', 'Composition requires between 1 and 256 inputs');
     }
     if (options.validate !== undefined && typeof options.validate !== 'boolean') {
       throw new PolyglotError('ERR_INVALID_INPUT', 'validate must be a boolean');
     }
-    const strategy = strategyName(options.strategy);
+    let strategy = strategyName(options.strategy);
+    // With a single input and a png/gif/jpeg carrier strategy (or 'auto', which
+    // defaults to png), prepend a built-in 1x1 carrier so the caller can supply
+    // only the payload. The carrier strategy is then selected explicitly.
+    let specs: PolyglotInput[] = options.inputs;
+    if (specs.length === 1 && (strategy === 'auto' || isCarrierFormat(strategy))) {
+      const [payload] = specs;
+      const carrier: CarrierFormat = strategy === 'auto' ? 'png' : strategy;
+      specs = [{ format: carrier, data: defaultCarrier(carrier) }, payload as PolyglotInput];
+      strategy = carrier;
+    }
+    if (specs.length < 2) {
+      throw new PolyglotError('ERR_INVALID_INPUT', 'Composition requires at least two inputs, or a single payload with a png, gif or jpeg carrier strategy');
+    }
     const maxOutputBytes = options.maxOutputBytes ?? DEFAULT_LIMIT;
     if (!Number.isInteger(maxOutputBytes) || maxOutputBytes <= 0 || maxOutputBytes > 0xffff_ffff) {
       throw new PolyglotError('ERR_INVALID_INPUT', 'maxOutputBytes must be a positive integer at most 2^32 - 1');
     }
     let total = 0;
-    const inputs = options.inputs.map((input) => {
+    const inputs = specs.map((input) => {
       if (!input || typeof input !== 'object') throw new PolyglotError('ERR_INVALID_INPUT', 'Each input must be an object');
       formatName(input.format);
       if (input.label !== undefined && typeof input.label !== 'string') throw new PolyglotError('ERR_INVALID_INPUT', 'Input labels must be strings');

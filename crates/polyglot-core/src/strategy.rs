@@ -32,5 +32,13 @@ pub trait CompositionStrategy: Send + Sync {
             self.requirements().limitations,
         ))
     }
+    /// Indices of inputs the strategy carries as an opaque payload. Composer
+    /// never parses or validates them, in isolation or in the output: their
+    /// bytes are stored unchanged and their format is the caller's concern.
+    /// Used for payloads whose internal format varies or is unknown, so the
+    /// engine should not impose any one structural profile on them.
+    fn carried_inputs(&self, _inputs: &[PolyglotInput]) -> Vec<usize> {
+        vec![]
+    }
     fn compose(&self, inputs: &[PolyglotInput]) -> Result<CompositionResult>;
 }

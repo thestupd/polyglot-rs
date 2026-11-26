@@ -26,6 +26,20 @@ impl CompatibilityResult {
         }
     }
 
+    /// Only for strategies whose documented parser/decoding tests pass.
+    pub fn supported(
+        strategy: &str,
+        explanation: impl Into<String>,
+        limitations: Vec<String>,
+    ) -> Self {
+        Self {
+            status: CompatibilityStatus::Supported,
+            strategies: vec![strategy.into()],
+            limitations,
+            explanation: Some(explanation.into()),
+        }
+    }
+
     pub fn conditional(
         strategy: &str,
         explanation: impl Into<String>,

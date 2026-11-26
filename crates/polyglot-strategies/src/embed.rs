@@ -15,7 +15,9 @@ impl CompositionStrategy for Embed {
             limitations: vec!["Requires a format-specific embedding implementation and independently verified parser profile".into()] }
     }
     fn check_compatibility(&self, _: &[PolyglotInput]) -> Result<CompatibilityResult> {
-        Ok(CompatibilityResult::unsupported("No built-in embedding algorithm is enabled; feasibility research is not production support"))
+        Ok(CompatibilityResult::unsupported(
+            "No built-in embedding algorithm is enabled",
+        ))
     }
     fn compose(&self, _: &[PolyglotInput]) -> Result<CompositionResult> {
         Err(Error::UnsupportedCombination(

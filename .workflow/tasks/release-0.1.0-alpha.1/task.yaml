@@ -7,8 +7,8 @@ workflow: release
 version: 0.1.0-alpha.1
 previous_version: null
 steps:
-  - {name: release, status: in_progress}
+  - {name: release, status: done}
 pr: null
-release_url: null
+release_url: https://www.npmjs.com/package/polyglot-rs/v/0.1.0-alpha.1
 tickets: []
 updated: 2026-11-26

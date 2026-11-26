@@ -17,7 +17,7 @@ Before that public alpha, finish platform distribution and obtain passing remote
 | Rust architecture | Independent core, format handlers, registry, composer and strategy crate | Public extension contracts remain experimental |
 | Node integration | napi-rs workers, typed API, Buffer/Uint8Array support, CommonJS/ESM imports | Five-platform bundle pipeline prepared; remote consumer tests gate publication |
 | Inspection and validation | PNG, GIF and 188-byte MPEG-TS handlers | Static PNG profile; documented GIF and transport-validation limits |
-| Composition | Conditional append, whole-output validation, reports, native extension interfaces | No production multi-format combination is enabled |
+| Composition | `png`, `gif` and `jpeg` image carrier strategies (arbitrary unvalidated payload, byte-range region), region validation, conditional append, reports, native extension interfaces | Only the carrier image is validated; the payload is carried unchanged |
 | Research | PNG ancillary/TS decoding experiment; GIF insertion failure reproduced | Parser-specific observations are not general format support |
 | Verification | Latest local run: 19 Rust tests, 16 Node tests, 4 release integrity tests and 3 independent decoding tests; release build, lint, type checks and packed-consumer check passed | Remote platform results and registry verification gate each publication |
 | Release operations | CI bundle/consumer workflow, checked artifact manifests, guarded alpha publishing command, lockfiles, changelog and documentation | First public upload pending; optional platform child packages are deferred in favor of one bundled package |
@@ -81,7 +81,7 @@ Expand the fixture corpus beyond tiny baseline images and one transport encoding
 
 ## First production composition profile
 
-Start from the [PNG/GIF + MPEG-TS feasibility report](feasibility.md). PNG ancillary embedding is the leading candidate, but it needs a named transport-resynchronization profile. It is not valid strict byte-zero MPEG-TS merely because a tolerant demuxer decodes it.
+Embedding and overlap remain reserved interfaces with no enabled built-in algorithm. A future profiled combination must establish independent parsing and decoded-content guarantees before claiming support.
 
 - Define explicit parser-profile selection and report which interpretation/profile was validated. Keep strict defaults unchanged.
 - Implement bounded stream-offset discovery and describe any bytes skipped by a tolerant profile. Do not hide discarded prefixes/suffixes behind an unqualified `valid` result.

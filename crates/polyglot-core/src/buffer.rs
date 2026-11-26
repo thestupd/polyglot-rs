@@ -67,6 +67,10 @@ impl<'a> Cursor<'a> {
         let b = self.take(2)?;
         Ok(u16::from_le_bytes([b[0], b[1]]))
     }
+    pub fn be_u16(&mut self) -> Result<u16> {
+        let b = self.take(2)?;
+        Ok(u16::from_be_bytes([b[0], b[1]]))
+    }
 }
 
 #[cfg(test)]

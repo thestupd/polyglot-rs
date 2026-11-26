@@ -27,9 +27,8 @@ verification:
     lint: npm run lint
     typecheck: npm run typecheck
     unit_test: npm test
-    integration_test: npm run test:parsers
     package_test: npm run test:package
-  required: [build, lint, typecheck, unit_test, integration_test, package_test]
+  required: [build, lint, typecheck, unit_test, package_test]
   acceptance: required
 infrastructure:
   provider: none

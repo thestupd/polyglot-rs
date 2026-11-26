@@ -33,6 +33,16 @@ pub struct InputReport {
     pub validation: Option<ValidationResult>,
 }
 
+/// Byte range in the output where one format interpretation lives. When a
+/// strategy declares a region, that format is validated over the region only.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Region {
+    pub format: String,
+    pub offset: usize,
+    pub length: usize,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CompositionReport {
@@ -42,6 +52,8 @@ pub struct CompositionReport {
     pub validation: Vec<ValidationResult>,
     pub validated: bool,
     pub size_bytes: usize,
+    /// Empty when every interpretation spans the complete output.
+    pub regions: Vec<Region>,
     pub warnings: Vec<String>,
 }
 
@@ -62,10 +74,28 @@ impl CompositionResult {
                 validation: vec![],
                 validated: false,
                 size_bytes: data.len(),
+                regions: vec![],
                 warnings: vec![],
             },
             data,
         }
+    }
+
+    /// Declare where each interpretation lives in the candidate output.
+    pub fn with_regions(mut self, regions: Vec<Region>) -> Self {
+        self.report.regions = regions;
+        self
+    }
+}
+
+fn region_bytes<'a>(data: &'a [u8], regions: &[Region], format: &str) -> Result<&'a [u8]> {
+    match regions.iter().find(|r| r.format == format) {
+        None => Ok(data),
+        Some(r) => r
+            .offset
+            .checked_add(r.length)
+            .and_then(|end| data.get(r.offset..end))
+            .ok_or_else(|| Error::InvalidComposition(format!("{format} region is out of bounds"))),
     }
 }
 
@@ -223,44 +253,52 @@ impl Composer {
                     .into(),
             ));
         }
-        let mut input_reports = vec![];
-        for input in inputs {
-            let validation = if options.validate {
-                let reports = self.registry.validate(
-                    &input.data,
-                    std::slice::from_ref(&input.format),
-                    options.limits,
-                )?;
-                let report = reports.into_iter().next().ok_or_else(|| {
-                    Error::InvalidComposition("Missing input validation report".into())
-                })?;
-                if !report.valid {
-                    return Err(Error::InvalidComposition(format!(
-                        "Input {}: {}",
-                        input.format,
-                        report.errors.join("; ")
-                    )));
-                }
-                Some(report)
-            } else {
-                None
-            };
-            input_reports.push(InputReport {
-                format: input.format.clone(),
-                label: input.label.clone(),
-                size_bytes: input.data.len(),
-                validation,
-            });
-        }
-        let formats: Vec<_> = inputs
+        // Validation reports are cached across candidate strategies. A strategy's
+        // carried payload inputs are stored unchanged and never validated, so an
+        // input validated for one candidate may be opaque payload for another.
+        let mut input_validation: Vec<Option<ValidationResult>> = vec![None; inputs.len()];
+        let distinct_formats = inputs
             .iter()
-            .map(|i| i.format.clone())
+            .map(|i| i.format.as_str())
             .collect::<BTreeSet<_>>()
-            .into_iter()
-            .collect();
+            .len();
         let mut last_error = None;
-        for (index, compatibility) in candidates {
+        'candidates: for (index, compatibility) in candidates {
             let strategy = &self.strategies[index];
+            let carried = strategy.carried_inputs(inputs);
+            // Validate every input the strategy does not carry as opaque payload.
+            if options.validate {
+                for (position, input) in inputs.iter().enumerate() {
+                    if carried.contains(&position) {
+                        continue;
+                    }
+                    if input_validation[position].is_none() {
+                        let report = self
+                            .registry
+                            .validate(
+                                &input.data,
+                                std::slice::from_ref(&input.format),
+                                options.limits,
+                            )?
+                            .into_iter()
+                            .next()
+                            .ok_or_else(|| {
+                                Error::InvalidComposition("Missing input validation report".into())
+                            })?;
+                        input_validation[position] = Some(report);
+                    }
+                    if let Some(report) = &input_validation[position] {
+                        if !report.valid {
+                            last_error = Some(Error::InvalidComposition(format!(
+                                "Input {}: {}",
+                                input.format,
+                                report.errors.join("; ")
+                            )));
+                            continue 'candidates;
+                        }
+                    }
+                }
+            }
             let mut candidate = match strategy.compose(inputs) {
                 Ok(candidate) => candidate,
                 Err(error @ (Error::InvalidComposition(_) | Error::UnsupportedCombination(_))) => {
@@ -272,6 +310,26 @@ impl Composer {
             if candidate.data.len() > options.max_output_bytes {
                 return Err(Error::LimitExceeded("Output exceeds maxOutputBytes".into()));
             }
+            // Bounds are enforced even when validation is disabled.
+            let regions = &candidate.report.regions;
+            for region in regions {
+                region_bytes(&candidate.data, regions, &region.format)?;
+            }
+            // Output validation covers every non-carried distinct format, each
+            // checked within its declared region. Carried payloads are skipped.
+            let carried_formats: BTreeSet<&str> = carried
+                .iter()
+                .filter_map(|&position| inputs.get(position))
+                .map(|i| i.format.as_str())
+                .collect();
+            let output_formats: Vec<String> = inputs
+                .iter()
+                .enumerate()
+                .filter(|(position, _)| !carried.contains(position))
+                .map(|(_, i)| i.format.clone())
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect();
             let validation = if options.validate {
                 // The output has its own size budget; input limits do not reject
                 // valid strategy overhead after it has already been bounded.
@@ -279,9 +337,15 @@ impl Composer {
                     max_input_bytes: options.max_output_bytes,
                     ..options.limits
                 };
-                let reports = self
-                    .registry
-                    .validate(&candidate.data, &formats, output_limits)?;
+                let mut reports = Vec::with_capacity(output_formats.len());
+                for format in &output_formats {
+                    let bytes = region_bytes(&candidate.data, &candidate.report.regions, format)?;
+                    reports.extend(self.registry.validate(
+                        bytes,
+                        std::slice::from_ref(format),
+                        output_limits,
+                    )?);
+                }
                 if reports.iter().any(|r| !r.valid) {
                     last_error = Some(Error::InvalidComposition(
                         reports
@@ -297,6 +361,22 @@ impl Composer {
             } else {
                 vec![]
             };
+            let input_reports: Vec<InputReport> = inputs
+                .iter()
+                .enumerate()
+                .map(|(position, input)| InputReport {
+                    format: input.format.clone(),
+                    label: input.label.clone(),
+                    size_bytes: input.data.len(),
+                    validation: if carried.contains(&position) {
+                        None
+                    } else {
+                        input_validation[position].clone()
+                    },
+                })
+                .collect();
+            let regions = std::mem::take(&mut candidate.report.regions);
+            let region_warning = !regions.is_empty();
             candidate.report = CompositionReport {
                 strategy: strategy.name().into(),
                 compatibility,
@@ -304,17 +384,32 @@ impl Composer {
                 validation,
                 validated: options.validate,
                 size_bytes: candidate.data.len(),
+                regions,
                 warnings: vec![
                     "Native validation is not independent parser or decoded-content verification"
                         .into(),
                 ],
             };
+            if region_warning {
+                candidate
+                    .report
+                    .warnings
+                    .push("Each interpretation was validated within its declared region".into());
+            }
+            if !carried_formats.is_empty() {
+                let mut names: Vec<&str> = carried_formats.into_iter().collect();
+                names.sort_unstable();
+                candidate.report.warnings.push(format!(
+                    "Carried payload stored unchanged and not validated: {}",
+                    names.join(", ")
+                ));
+            }
             if !options.validate {
                 candidate.report.warnings.push(
                     "Validation was disabled; this is an unvalidated binary candidate".into(),
                 );
             }
-            if formats.len() < 2 {
+            if distinct_formats < 2 {
                 candidate
                     .report
                     .warnings

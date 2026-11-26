@@ -1,9 +1,11 @@
 //! Built-in format handlers. These do not depend on Node.js.
 mod gif;
+mod jpeg;
 mod mpeg_ts;
 mod png;
 
 pub use gif::Gif;
+pub use jpeg::Jpeg;
 pub use mpeg_ts::MpegTs;
 pub use png::Png;
 use polyglot_core::{Error, FormatInfo, Registry, Result, ValidationResult};
@@ -12,6 +14,7 @@ pub fn builtin_registry() -> Result<Registry> {
     let mut registry = Registry::new();
     registry.register(Png)?;
     registry.register(Gif)?;
+    registry.register(Jpeg)?;
     registry.register(MpegTs)?;
     Ok(registry)
 }
