@@ -143,7 +143,7 @@ const output = result.toBuffer(); // owned Buffer copy
 console.log(result.report.validated, result.report.compatibility.status);
 ```
 
-`create({ inputs, strategy?, validate?, maxInputBytes?, maxDecodedBytes?, maxOutputBytes? })` returns `Promise<PolyglotResult>`. Supply between 2 and 256 inputs. By default, every input is validated against its own declared format and the complete candidate is independently checked against every distinct requested format. Any failed native check rejects the result with `ERR_INVALID_COMPOSITION`. The report includes the chosen strategy, compatibility assessment, input sizes/labels/validation, output validation results, byte size, and warnings. `validated: true` means native structural validation passed; it does not mean external parser/decoded-content verification passed. Compatibility is never automatically promoted after native validation.
+`create({ inputs, strategy?, validate?, maxInputBytes?, maxDecodedBytes?, maxOutputBytes? })` returns `Promise<PolyglotResult>`. Supply between 2 and 256 inputs, or a single payload with a `png`/`gif`/`jpeg` carrier strategy (see above). By default, every non-carried input is validated against its declared format, and each validated format is then checked within its region of the output — the whole output when the strategy declares no regions. A strategy's carried payload is never validated. Any failed native check rejects the result with `ERR_INVALID_COMPOSITION`. The report includes the chosen strategy, compatibility assessment, input sizes/labels/validation, output validation results, byte size, and warnings. `validated: true` means native structural validation passed; it does not mean external parser/decoded-content verification passed. Compatibility is never automatically promoted after native validation.
 
 `auto` tries supported strategies before conditional strategies, preserving registration order within each status. It tries the next candidate after a strategy or output validation rejects an invalid/unsupported composition. Argument, resource and other operational errors stop the attempt. Explicit selection tries only that strategy. The built-in order is append, png, gif, jpeg, embed, overlap. Missing names produce `ERR_UNKNOWN_STRATEGY`.
 
@@ -201,10 +201,9 @@ ZIP, MP4/fMP4 and PDF are planned and currently have no handlers. JPEG is valida
 
 | Category | Current status |
 | --- | --- |
-| Supported inspection handlers | PNG, GIF, MPEG-TS |
+| Supported inspection handlers | PNG, GIF, JPEG, MPEG-TS |
 | Implemented composition strategies | `png`, `gif`, `jpeg` image carriers, conditional append; native embedding capability and reserved embed/overlap interfaces |
 | Payload carriers | PNG, GIF and JPEG images carry an arbitrary unvalidated payload addressable by byte range; only the carrier image is validated |
-| Experimental research | GIF comment insertion breaks TS; whole-file segment playback without a byte range depends on the player |
 | Further investigation | Additional carrier formats; fuller JPEG validation; verified multi-format decode profiles |
 
 Carrier strategies store the payload unchanged and validate only the carrier image; they do not claim the payload decodes.
@@ -213,18 +212,18 @@ Carrier strategies store the payload unchanged and validate only the carrier ima
 
 ```text
 crates/polyglot-core     Input model, errors, limits, handlers/capabilities, registry, composer/contracts
-crates/polyglot-formats  PNG, GIF, MPEG-TS handlers and built-in registry
+crates/polyglot-formats  PNG, GIF, JPEG, MPEG-TS handlers and built-in registry
 crates/polyglot-strategies png/gif/jpeg image carriers, conditional append; reserved embed/overlap interfaces
 crates/polyglot-napi     Private napi-rs bridge, libuv asynchronous worker tasks
 packages/node/src       Public TypeScript types, input checks, errors, detection hooks
 tests/fixtures          Small reproducible images and MPEG-2 transport stream
 tests/integration       Node API and native binding checks
-docs/                   Feasibility report and observed parser results
+docs/                   Roadmap and release instructions
 ```
 
 Add a Rust format by implementing `polyglot_core::FormatHandler` and registering it in a `Registry`. Handlers implement `name`, `detect`, `validate` and `inspect`; limit-aware methods allow them to enforce decoding budgets. Native handlers must obey the configured limits, return deterministic reports and safely handle malformed input. The core has no dependency on any format crate or Node.js.
 
-Optional `AppendCapability` and `EmbeddingCapability` interfaces describe layout constraints and native embedding locations/operations. PNG/GIF prohibit both prefixes and suffixes under their strict profiles; MPEG-TS requires 188-byte alignment and complete-output validation. Unknown handlers without capabilities remain unproven. Append constraints are necessary conditions, not proof that neighboring bytes will parse.
+Optional `AppendCapability` and `EmbeddingCapability` interfaces describe layout constraints and native embedding locations/operations. PNG, GIF and JPEG prohibit both prefixes and suffixes under their strict profiles; MPEG-TS requires 188-byte alignment and complete-output validation. Unknown handlers without capabilities remain unproven. Append constraints are necessary conditions, not proof that neighboring bytes will parse.
 
 Add a Rust algorithm by implementing `CompositionStrategy` (`name`, `check_compatibility`, `compose`, optional `requirements` / `check_formats`) and calling `Composer::register_strategy`. Format-only queries use `check_formats`, whose default conservatively requires input bytes; they never pass fabricated empty inputs to a custom byte-aware checker. Return `CompositionResult::candidate` (optionally `.with_regions(...)` to say where each interpretation lives); Composer reconstructs the final report and performs native validation rather than trusting a strategy's prefilled validation claims. Native strategy authors must enforce allocation budgets before allocating output and may claim `supported` only with documented independent parser/content evidence. Overlap algorithms implement this same interface with their format-specific constraints. Custom native handlers/algorithms require rebuilding the bridge; no arbitrary JavaScript-to-Rust composition bridge is implied.
 

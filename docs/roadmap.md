@@ -6,9 +6,9 @@ Updated: 2026-11-26. Version targets below are proposed release scopes, not deli
 
 The implementation is ready for local evaluation and an engineering preview. It is **not yet ready for a general public npm release or version 1.0**.
 
-The first public release should be **0.1.0-alpha.1**, positioned as a Rust-powered binary inspection and validation library with an experimental composition framework. It can ship without a production polyglot combination if that scope is explicit. The package's current `0.1.0` manifest value does not mean a release has been published.
+**0.1.0-alpha.1** was published to npm as the first public release: a Rust-powered binary inspection and validation library with an experimental composition framework and no verified multi-format decode profile. **0.1.0-alpha.2** adds the `png`/`gif`/`jpeg` image carrier strategies (arbitrary unvalidated payload addressable by byte range).
 
-Before that public alpha, finish platform distribution and obtain passing remote CI results. A host-specific tarball already works locally, but that does not establish that a normal npm installation works across all advertised platforms.
+Platform distribution is in place: the five-platform tarball builds on CI and installs on every advertised target (Node.js 22/24) without a native build step.
 
 ## Current implementation
 
@@ -16,13 +16,12 @@ Before that public alpha, finish platform distribution and obtain passing remote
 | --- | --- | --- |
 | Rust architecture | Independent core, format handlers, registry, composer and strategy crate | Public extension contracts remain experimental |
 | Node integration | napi-rs workers, typed API, Buffer/Uint8Array support, CommonJS/ESM imports | Five-platform bundle pipeline prepared; remote consumer tests gate publication |
-| Inspection and validation | PNG, GIF and 188-byte MPEG-TS handlers | Static PNG profile; documented GIF and transport-validation limits |
+| Inspection and validation | PNG, GIF, JPEG and 188-byte MPEG-TS handlers | Static PNG profile; structural-only JPEG (no pixel decode); documented GIF and transport-validation limits |
 | Composition | `png`, `gif` and `jpeg` image carrier strategies (arbitrary unvalidated payload, byte-range region), region validation, conditional append, reports, native extension interfaces | Only the carrier image is validated; the payload is carried unchanged |
-| Research | PNG ancillary/TS decoding experiment; GIF insertion failure reproduced | Parser-specific observations are not general format support |
-| Verification | Latest local run: 19 Rust tests, 16 Node tests, 4 release integrity tests and 3 independent decoding tests; release build, lint, type checks and packed-consumer check passed | Remote platform results and registry verification gate each publication |
+| Verification | Rust, Node, release-tool and packed-consumer checks pass locally and on the five-platform CI matrix; verification no longer depends on FFmpeg | Remote platform results and registry verification gate each publication |
 | Release operations | CI bundle/consumer workflow, checked artifact manifests, guarded alpha publishing command, lockfiles, changelog and documentation | First public upload pending; optional platform child packages are deferred in favor of one bundled package |
 
-The public source repository is [thestupd/polyglot-rs](https://github.com/thestupd/polyglot-rs). The local repository is initialized on `main` with its SSH origin configured. The first source commit/push and actual CI runs are still needed to establish release provenance and platform results.
+The public source repository is [thestupd/polyglot-rs](https://github.com/thestupd/polyglot-rs). Source is pushed, the five-platform CI matrix runs on each `release/**` branch, and 0.1.0-alpha.1 is published to npm under the `alpha` tag.
 
 ## Proposed release sequence
 
@@ -45,16 +44,16 @@ Prioritize this work before adding more format combinations. It completes the di
 ### Distribution and platform gates
 
 - [x] Keep the npm package name `polyglot-rs` and set the repository, homepage, issue tracker and maintainer metadata.
-- [ ] Verify ownership/availability of the root and platform package names on the public npm registry.
+- [x] Verify ownership/availability of the package name on the public npm registry (published as `polyglot-rs`).
 - [x] Initialize the local Git repository and configure `git@github.per:thestupd/polyglot-rs.git` as origin.
-- [ ] Commit and push the source, and run CI.
-- [ ] Build macOS ARM64/x64, Linux ARM64/x64 with glibc, and Windows x64 binaries.
+- [x] Commit and push the source, and run CI.
+- [x] Build macOS ARM64/x64, Linux ARM64/x64 with glibc, and Windows x64 binaries.
 - [ ] Define minimum macOS/Windows versions and a Linux glibc baseline. Choose build environments that actually satisfy those runtime baselines; successful builds on a recent Linux runner alone do not prove older-system compatibility.
 - [x] Implement one tarball containing the five binaries, selected by the generated napi-rs loader; defer optional platform child packages.
-- [ ] Test the assembled root package and its selected platform package on every advertised target using Node.js 22 and 24, without Rust or a native build step in the consumer environment.
+- [x] Test the assembled package on every advertised target using Node.js 22 and 24, without Rust or a native build step in the consumer environment.
 - [ ] Test a missing/unsupported native binary and provide an actionable load error. State that musl and other unbuilt targets are outside the initial support matrix.
 - [x] Make the release pack step consume the exact tested artifacts. Source-workspace packing/publishing is guarded and release packaging never rebuilds native binaries.
-- [ ] Obtain passing remote build, lint, type, Rust, Node, decoding and packed-consumer jobs. Link those runs to the release candidate.
+- [x] Obtain passing remote build, lint, type, Rust, Node and packed-consumer jobs, and link those runs to the release candidate.
 
 ### Public contract and release gates
 
@@ -62,7 +61,7 @@ Prioritize this work before adding more format combinations. It completes the di
 - [ ] State prominently that `validated` means native validation, while `supported` requires documented independent parser/content evidence.
 - [ ] Explain that opaque append with `validate: false` returns an unvalidated binary assembly, and that JavaScript hooks provide detection only.
 - [ ] Describe current strict PNG/GIF terminator behavior, partial-capture MPEG-TS warnings, and unsupported animation/packet variants.
-- [ ] Add a changelog, contributor instructions, a vulnerability-reporting contact and a reproducible release procedure.
+- [x] Add a changelog and a reproducible release procedure (contributor and vulnerability-reporting docs still pending).
 - [ ] Keep package versions and selected native package versions consistent; configure the intended public registry explicitly in the release workflow.
 - [ ] Set up a controlled publishing identity, preferably npm trusted publishing where supported, and record artifact provenance.
 - [ ] After the release gates pass, publish the alpha using an explicit `alpha` distribution tag. npm's default publish tag is `latest`; a prerelease version should not be placed there unintentionally. See [npm publish configuration](https://docs.npmjs.com/cli/v11/commands/npm-publish/#tag).
@@ -85,7 +84,7 @@ Embedding and overlap remain reserved interfaces with no enabled built-in algori
 
 - Define explicit parser-profile selection and report which interpretation/profile was validated. Keep strict defaults unchanged.
 - Implement bounded stream-offset discovery and describe any bytes skipped by a tolerant profile. Do not hide discarded prefixes/suffixes behind an unqualified `valid` result.
-- Implement PNG ancillary embedding in Rust, with checked chunk lengths, CRCs, source preservation and output budgets.
+- The `png` carrier already embeds an unvalidated payload in a checked ancillary chunk; a verified profile must additionally decode the result and prove both interpretations.
 - Independently decode the complete output as an image and as media. Compare image pixels, frame/audio content where applicable, and payload identity rather than relying on probing or stream discovery.
 - Test multiple input sizes, metadata layouts, stream lengths and available standard parser versions. Exercise corrupt/truncated candidates and the exact declared resynchronization bounds.
 - Ensure `inspect`, `validate`, `checkCompatibility` and `create` agree about profile names and guarantees. Format-only queries must remain conservative where bytes determine feasibility.
@@ -93,11 +92,11 @@ Embedding and overlap remain reserved interfaces with no enabled built-in algori
 
 **Exit criterion:** at least one production strategy produces a structured output that passes both intended interpretations and preserves the tested content. A temporary research file, concatenation control, successful probe or partial decode does not satisfy the gate.
 
-GIF + MPEG-TS stays a separate investigation. Its sub-block framing needs a packet-aware layout; ordinary comment insertion has already failed the transport decoding experiment. It may remain unsupported if its practical parser constraints cannot be met.
+A verified GIF + MPEG-TS decode profile (beyond the current opaque carrier) stays a separate investigation; its sub-block framing needs a packet-aware layout and may remain unsupported if its practical parser constraints cannot be met.
 
 ## JPEG and ZIP
 
-Implement these handlers before attempting their composition. JPEG needs marker/segment parsing, bounds validation and independent decoding. ZIP needs bounded directory/entry handling, offset validation and applicable checksum checks, with explicit policies for archive variants and decompression limits.
+JPEG structural inspection (markers, frame header, bounds) already ships; fuller validation needs independent pixel decoding. ZIP needs bounded directory/entry handling, offset validation and applicable checksum checks, with explicit policies for archive variants and decompression limits.
 
 Then investigate JPEG + ZIP under named parser profiles. Preserve decoded image content and extracted archive entries through independent tools. Keep ZIP64, encrypted archives and other variants explicitly unsupported until implemented and tested. Do not infer pair support from the existence of both handlers.
 

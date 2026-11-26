@@ -15,7 +15,7 @@ The release is one package with five native binaries. No platform child packages
 ```sh
 gh run download <successful-run-id> --repo thestupd/polyglot-rs --name npm-release --dir release
 npm run pack:check
-npm run test:release -- release/polyglot-rs-0.1.0-alpha.1.tgz
+npm run test:release -- release/polyglot-rs-<version>.tgz
 ```
 
 If assembling downloaded native artifacts locally instead, run `npm run build:ts --workspace=polyglot-rs` and `npm run release:prepare -- <artifact-directory>`. Only artifacts from a successful workflow qualify for publication. The manifest/hash checks are consistency checks, not a substitute for that successful run.
@@ -35,6 +35,6 @@ Publication is a separate explicit action; build/prepare/test commands never upl
 
 ## Verify and recover
 
-Check `npm view polyglot-rs@0.1.0-alpha.1 version dist.integrity --registry=https://registry.npmjs.org/` and `npm view polyglot-rs dist-tags --registry=https://registry.npmjs.org/`. Install that exact version into a clean consumer and exercise both CommonJS and ESM.
+Check `npm view polyglot-rs@<version> version dist.integrity --registry=https://registry.npmjs.org/` and `npm view polyglot-rs dist-tags --registry=https://registry.npmjs.org/`. Install that exact version into a clean consumer and exercise both CommonJS and ESM.
 
 If upload status is uncertain, query the exact version and compare integrity before retrying. Never replace a published version or silently promote an alpha to `latest`. A future revision needs a new version and a new complete build/consumer run.
