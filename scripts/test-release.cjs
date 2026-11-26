@@ -27,13 +27,20 @@ try {
       assert.equal((await Polyglot.validate(data, { formats: ['png'] }))[0].valid, true);
       const esm = await import('polyglot-rs');
       assert.equal(esm.Polyglot, Polyglot);
-      assert.equal((await Polyglot.checkCompatibility({ formats: ['png', 'mpeg-ts'] })).status, 'unsupported');
+      const compat = await Polyglot.checkCompatibility({ formats: ['png', 'mpeg-ts'] });
+      assert.equal(compat.status, 'supported');
+      assert.deepEqual(compat.strategies, ['png']);
       const candidate = await Polyglot.create({ inputs: [
         { format: 'opaque-a', data: Buffer.from([0, 255]) },
         { format: 'opaque-b', data: new Uint8Array([42]) },
       ], validate: false });
       assert.deepEqual(candidate.toBuffer(), Buffer.from([0, 255, 42]));
       assert.equal(candidate.report.validated, false);
+      // Carrier strategy with a built-in 1x1 carrier from a single payload.
+      const carried = await Polyglot.create({ inputs: [{ format: 'payload', data: data }], strategy: 'jpeg' });
+      assert.equal(carried.report.strategy, 'jpeg');
+      assert.equal(carried.payloadRegion().length, data.length);
+      assert.match(carried.byteRange(), /^\\d+@\\d+$/);
     })().catch((error) => { console.error(error); process.exitCode = 1; });
   `;
   execFileSync(process.execPath, ['-e', test], { cwd: directory, stdio: 'inherit' });
